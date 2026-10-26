@@ -11,7 +11,6 @@
     <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
     
     <style>
-        /* Modern Telegram-Native UI */
         :root {
             --bg-color: var(--tg-theme-bg-color, #1e1e1e);
             --text-color: var(--tg-theme-text-color, #ffffff);
@@ -32,23 +31,20 @@
             height: 100vh; overflow: hidden;
         }
 
-        /* Header / Score */
-        .score-container { text-align: center; margin-bottom: 20px; }
+        .score-container { text-align: center; margin-bottom: 30px; }
         .score-title { font-size: 16px; color: var(--hint-color); text-transform: uppercase; letter-spacing: 1px; }
         .score-value { font-size: 48px; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; }
 
-        /* The Main Tap Object */
         .tap-area {
-            position: relative; width: 200px; height: 200px;
+            position: relative; width: 220px; height: 220px;
             display: flex; align-items: center; justify-content: center;
-            font-size: 100px; cursor: pointer;
+            font-size: 110px; cursor: pointer;
             background: radial-gradient(circle, rgba(51,144,236,0.2) 0%, transparent 70%);
             border-radius: 50%;
             transition: transform 0.05s ease;
         }
         .tap-area:active { transform: scale(0.95); }
 
-        /* Floating +1 Animation */
         .floating-text {
             position: absolute; font-size: 24px; font-weight: bold; color: #4CAF50;
             pointer-events: none; animation: floatUp 1s ease-out forwards;
@@ -58,18 +54,12 @@
             100% { opacity: 0; transform: translateY(-50px) scale(1.5); }
         }
 
-        /* Energy Bar */
-        .energy-container { width: 80%; max-width: 300px; margin-top: 30px; }
-        .energy-text { display: flex; justify-content: space-between; font-size: 14px; color: var(--hint-color); margin-bottom: 5px; }
-        .energy-bar-bg { width: 100%; height: 12px; background: #333; border-radius: 10px; overflow: hidden; }
-        .energy-bar-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #ff9800, #ffc107); transition: width 0.1s linear; }
-
-        /* Ads Button */
+        /* Optional Bonus Ad Button (Clearly marked as optional extra reward) */
         .ad-btn {
-            margin-top: 30px; width: 80%; max-width: 300px;
+            margin-top: 40px; width: 85%; max-width: 320px;
             padding: 15px; border: none; border-radius: 12px;
             background: var(--button-color); color: var(--button-text);
-            font-size: 16px; font-weight: bold; cursor: pointer;
+            font-size: 15px; font-weight: bold; cursor: pointer;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: background 0.2s;
             display: flex; align-items: center; justify-content: center; gap: 8px;
         }
@@ -86,67 +76,38 @@
 </head>
 <body>
 
-    <!-- Score Display -->
     <div class="score-container">
         <div class="score-title">Gems Mined</div>
         <div class="score-value">💎 <span id="score">0</span></div>
     </div>
 
-    <!-- Tap Object -->
+    <!-- Core Action: Fully free, unlimited tapping -->
     <div class="tap-area" id="tapObject" onclick="handleTap(event)">
         💎
     </div>
 
-    <!-- Energy System -->
-    <div class="energy-container">
-        <div class="energy-text">
-            <span>⚡ Energy</span>
-            <span id="energyText">1000 / 1000</span>
-        </div>
-        <div class="energy-bar-bg">
-            <div class="energy-bar-fill" id="energyFill"></div>
-        </div>
-    </div>
-
-    <!-- Compliant Rewarded Ad Button -->
+    <!-- Optional Bonus Button -->
     <button class="ad-btn" id="adBtn" onclick="watchAd()">
-        📺 Watch Ad to Refill & +500 Gems
+        📺 Watch Optional Bonus Ad (+500 Gems)
     </button>
 
-    <div id="toast">Ad Watched Successfully!</div>
+    <div id="toast">Reward Claimed!</div>
 
     <script>
-        // 1. Initialize Telegram
         const tg = window.Telegram.WebApp;
-        tg.expand(); // Make it full screen
+        tg.expand();
         tg.ready();
 
-        // 2. Game State
         let score = 0;
-        let energy = 1000;
-        const maxEnergy = 1000;
-        const energyPerTap = 5;
-
-        // UI Elements
         const scoreEl = document.getElementById('score');
-        const energyTextEl = document.getElementById('energyText');
-        const energyFillEl = document.getElementById('energyFill');
         const tapObject = document.getElementById('tapObject');
         const adBtn = document.getElementById('adBtn');
 
-        // 3. Tap Logic
+        // Core Action works 100% freely without restrictions or ads
         function handleTap(event) {
-            if (energy < energyPerTap) {
-                showToast("Not enough energy! Wait or watch an ad.");
-                return;
-            }
-
-            // Update State
             score += 1;
-            energy -= energyPerTap;
-            updateUI();
+            scoreEl.innerText = score.toLocaleString();
 
-            // Create Floating +1 Animation
             const rect = tapObject.getBoundingClientRect();
             const x = event.clientX - rect.left;
             const y = event.clientY - rect.top;
@@ -158,54 +119,32 @@
             plusOne.style.top = `${y}px`;
             
             tapObject.appendChild(plusOne);
-
-            // Remove animation element after it finishes
             setTimeout(() => { plusOne.remove(); }, 1000);
             
-            // Haptic feedback (if supported by Telegram)
             if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
         }
 
-        // Energy Regeneration Loop (1 energy per second)
-        setInterval(() => {
-            if (energy < maxEnergy) {
-                energy += 1;
-                updateUI();
-            }
-        }, 1000);
-
-        function updateUI() {
-            scoreEl.innerText = score.toLocaleString();
-            energyTextEl.innerText = `${energy} / ${maxEnergy}`;
-            energyFillEl.style.width = `${(energy / maxEnergy) * 100}%`;
-        }
-
-        // 4. Initialize Adsgram (CRITICAL STEP)
+        // Adsgram Initialization (debug: false for production)
         const AdController = window.Adsgram.init({
-            blockId: "56164", // <-- REPLACE with your actual Adsgram block ID
-            debug: false // <-- MUST BE TRUE FOR TESTING. CHANGE TO FALSE BEFORE MODERATION!
+            blockId: "56030", 
+            debug: false 
         });
 
-        // 5. Ad Watch Logic
+        // Optional Ad Trigger (Purely bonus, never required for app actions)
         function watchAd() {
             adBtn.disabled = true;
-            adBtn.innerText = "Loading Ad...";
+            adBtn.innerText = "Loading Bonus Ad...";
 
             AdController.show().then(() => {
-                // SUCCESS: User watched the ad. Give them the reward!
-                energy = maxEnergy; // Refill energy
-                score += 500; // Bonus score
-                updateUI();
-                
-                showToast("✅ +500 Gems & Energy Refilled!");
-                adBtn.innerText = "📺 Watch Ad to Refill & +500 Gems";
+                score += 500;
+                scoreEl.innerText = score.toLocaleString();
+                showToast("✅ +500 Bonus Gems Claimed!");
+                adBtn.innerText = "📺 Watch Optional Bonus Ad (+500 Gems)";
                 adBtn.disabled = false;
-
             }).catch((error) => {
-                // FAILED/SKIPPED: User closed ad early or network error
                 console.error("Ad error: ", error);
-                showToast("❌ Ad skipped or failed. No reward.");
-                adBtn.innerText = "📺 Watch Ad to Refill & +500 Gems";
+                showToast("❌ Ad skipped or failed.");
+                adBtn.innerText = "📺 Watch Optional Bonus Ad (+500 Gems)";
                 adBtn.disabled = false;
             });
         }
@@ -216,9 +155,6 @@
             toast.style.opacity = 1;
             setTimeout(() => { toast.style.opacity = 0; }, 3000);
         }
-
-        // Initial UI render
-        updateUI();
     </script>
 </body>
 </html>
