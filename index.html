@@ -168,9 +168,9 @@
         const INTERSTITIAL_ID = "50088";
         const REWARDED_ID_2 = "50089";
 
-        const RewardedController1 = window.Adsun ? window.Adsun.init({ blockId: REWARDED_ID_1, debug: false }) : null;
-        const InterstitialController = window.Adsun ? window.Adsun.init({ blockId: INTERSTITIAL_ID, debug: false }) : null;
-        const RewardedController2 = window.Adsun ? window.Adsun.init({ blockId: REWARDED_ID_2, debug: false }) : null;
+        const RewardedController1 = window.Adsun ? window.Adsun.init({ blockId: REWARDED_ID_1, debug: true }) : null;
+        const InterstitialController = window.Adsun ? window.Adsun.init({ blockId: INTERSTITIAL_ID, debug: true }) : null;
+        const RewardedController2 = window.Adsun ? window.Adsun.init({ blockId: REWARDED_ID_2, debug: true }) : null;
 
         onValue(ref(db, 'vault_slots'), (snapshot) => {
             const data = snapshot.val();
