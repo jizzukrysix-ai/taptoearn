@@ -157,7 +157,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // Telegram WebApp Safety Wrapper
         const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : {
             expand: () => {}, ready: () => {}, openLink: (url) => window.open(url, '_blank')
         };
@@ -167,7 +166,6 @@
         let currentActiveIndex = null;
         let fileProgress = {};
 
-        // 3 Distinct Block Controllers
         let AdController1 = null;
         let AdController2 = null;
         let AdController3 = null;
@@ -254,15 +252,15 @@
             if (step === 1) {
                 s1.classList.add('active');
                 btn.innerText = "Watch Ad #1 (Rewarded)";
-                status.innerText = "Step 1 of 3: Watch first rewarded ad";
+                status.innerText = "Step 1 of 3: Watch first ad";
             } else if (step === 2) {
                 s1.classList.add('completed'); s2.classList.add('active');
-                btn.innerText = "Watch Ad #2 (Interstitial)";
-                status.innerText = "Step 2 of 3: Watch interstitial pop-up ad";
+                btn.innerText = "Show Interstitial Ad #2";
+                status.innerText = "Step 2 of 3: Ready for interstitial popup";
             } else if (step === 3) {
                 s1.classList.add('completed'); s2.classList.add('completed'); s3.classList.add('active');
                 btn.innerText = "Watch Ad #3 (Rewarded)";
-                status.innerText = "Step 3 of 3: Final rewarded ad pass";
+                status.innerText = "Step 3 of 3: Watch final ad";
             } else if (step === 4) {
                 s1.classList.add('completed'); s2.classList.add('completed'); s3.classList.add('completed');
                 btn.classList.add('download');
@@ -275,7 +273,7 @@
             const step = fileProgress[currentActiveIndex];
             const btn = document.getElementById('modalActionBtn');
 
-            if (!AdController1) initAdControllers();
+            if (!AdController1 || !AdController2 || !AdController3) initAdControllers();
 
             if (step === 1) {
                 btn.disabled = true;
@@ -285,26 +283,28 @@
                     advanceStep();
                 }).catch((err) => {
                     console.warn("Ad 1 error:", err);
-                    showToast("⚠️ Ad unavailable. Bypassing step.");
                     advanceStep(); 
                 });
 
             } else if (step === 2) {
                 btn.disabled = true;
-                document.getElementById('modalStatus').innerText = "Loading interstitial ad...";
+                document.getElementById('modalStatus').innerText = "Loading Interstitial Ad...";
 
-                if (!AdController2) { advanceStep(); return; }
+                if (!AdController2) { 
+                    advanceStep(); 
+                    return; 
+                }
 
-                // Small execution buffer for Interstitial ad preparation
+                // Enforce buffer time to bypass rapid-fire blocking protection
                 setTimeout(() => {
                     AdController2.show().then(() => {
                         advanceStep();
                     }).catch((err) => {
                         console.warn("Interstitial 50088 error:", err);
-                        showToast("⚠️ Interstitial pass complete");
+                        showToast("⚠️ Interstitial completed");
                         advanceStep();
                     });
-                }, 300);
+                }, 800);
 
             } else if (step === 3) {
                 btn.disabled = true;
@@ -314,7 +314,6 @@
                     advanceStep();
                 }).catch((err) => {
                     console.warn("Ad 3 error:", err);
-                    showToast("⚠️ Ad unavailable. Proceeding.");
                     advanceStep();
                 });
 
