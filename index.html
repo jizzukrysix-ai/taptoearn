@@ -156,18 +156,22 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        const tg = window.Telegram.WebApp;
-        tg.expand(); tg.ready();
+        // Telegram WebApp Safety Wrapper
+        const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : {
+            expand: () => {}, ready: () => {}, openLink: (url) => window.open(url, '_blank')
+        };
+        try { tg.expand(); tg.ready(); } catch(e) {}
 
         let activeSlots = [];
         let currentActiveIndex = null;
         let fileProgress = {};
 
-        // Adsun Block IDs Setup (Replace with your actual Adsun block IDs)
+        // 3 Adsun Block IDs Setup (Replace with your actual Adsun block IDs)
         const REWARDED_ID_1 = "50087";
         const INTERSTITIAL_ID = "50088";
         const REWARDED_ID_2 = "50089";
 
+        // Initialize Adsun with debug: true so you can inspect network responses in browser inspector console
         const RewardedController1 = window.Adsun ? window.Adsun.init({ blockId: REWARDED_ID_1, debug: true }) : null;
         const InterstitialController = window.Adsun ? window.Adsun.init({ blockId: INTERSTITIAL_ID, debug: true }) : null;
         const RewardedController2 = window.Adsun ? window.Adsun.init({ blockId: REWARDED_ID_2, debug: true }) : null;
@@ -266,25 +270,46 @@
 
             if (step === 1) {
                 btn.disabled = true;
-                if (!RewardedController1) { advanceStep(); return; }
-                RewardedController1.show().then(() => advanceStep()).catch(() => {
-                    showToast("❌ Ad skipped or unavailable");
-                    btn.disabled = false;
+                if (!RewardedController1) { 
+                    showToast("⚠️ Ad Controller not loaded. Bypassing.");
+                    advanceStep(); 
+                    return; 
+                }
+                RewardedController1.show().then(() => {
+                    advanceStep();
+                }).catch((err) => {
+                    console.warn("Ad 1 error or unavailable:", err);
+                    showToast("⚠️ Ad unavailable. Bypassing step.");
+                    advanceStep(); // Fallback so user never gets stuck
                 });
+
             } else if (step === 2) {
                 btn.disabled = true;
-                if (!InterstitialController) { advanceStep(); return; }
-                InterstitialController.show().then(() => advanceStep()).catch(() => {
-                    showToast("❌ Interstitial unavailable, proceeding");
+                if (!InterstitialController) { 
+                    advanceStep(); 
+                    return; 
+                }
+                InterstitialController.show().then(() => {
                     advanceStep();
+                }).catch((err) => {
+                    console.warn("Interstitial error:", err);
+                    advanceStep(); // Fallback
                 });
+
             } else if (step === 3) {
                 btn.disabled = true;
-                if (!RewardedController2) { advanceStep(); return; }
-                RewardedController2.show().then(() => advanceStep()).catch(() => {
-                    showToast("❌ Final Ad skipped");
-                    btn.disabled = false;
+                if (!RewardedController2) { 
+                    advanceStep(); 
+                    return; 
+                }
+                RewardedController2.show().then(() => {
+                    advanceStep();
+                }).catch((err) => {
+                    console.warn("Ad 3 error:", err);
+                    showToast("⚠️ Ad unavailable. Proceeding.");
+                    advanceStep(); // Fallback
                 });
+
             } else if (step === 4) {
                 const link = activeSlots[currentActiveIndex].link;
                 if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
