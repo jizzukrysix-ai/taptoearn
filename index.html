@@ -166,6 +166,7 @@
         let currentActiveIndex = null;
         let fileProgress = {};
 
+        // 3 Distinct Block Controllers
         let AdController1 = null;
         let AdController2 = null;
         let AdController3 = null;
@@ -252,7 +253,7 @@
             if (step === 1) {
                 s1.classList.add('active');
                 btn.innerText = "Watch Ad #1 (Rewarded)";
-                status.innerText = "Step 1 of 3: Watch first ad";
+                status.innerText = "Step 1 of 3: Watch first rewarded ad";
             } else if (step === 2) {
                 s1.classList.add('completed'); s2.classList.add('active');
                 btn.innerText = "Show Interstitial Ad #2";
@@ -260,7 +261,7 @@
             } else if (step === 3) {
                 s1.classList.add('completed'); s2.classList.add('completed'); s3.classList.add('active');
                 btn.innerText = "Watch Ad #3 (Rewarded)";
-                status.innerText = "Step 3 of 3: Watch final ad";
+                status.innerText = "Step 3 of 3: Watch final rewarded ad";
             } else if (step === 4) {
                 s1.classList.add('completed'); s2.classList.add('completed'); s3.classList.add('completed');
                 btn.classList.add('download');
@@ -280,10 +281,10 @@
                 if (!AdController1) { advanceStep(); return; }
                 
                 AdController1.show().then(() => {
-                    advanceStep();
+                    startTimerAndAdvance();
                 }).catch((err) => {
                     console.warn("Ad 1 error:", err);
-                    advanceStep(); 
+                    startTimerAndAdvance(); 
                 });
 
             } else if (step === 2) {
@@ -291,30 +292,34 @@
                 document.getElementById('modalStatus').innerText = "Loading Interstitial Ad...";
 
                 if (!AdController2) { 
-                    advanceStep(); 
+                    startTimerAndAdvance(); 
                     return; 
                 }
 
-                // Enforce buffer time to bypass rapid-fire blocking protection
-                setTimeout(() => {
+                // 5-second buffer timer before showing Ad 2 to clear session limits
+                startCooldownTimer(5, () => {
+                    document.getElementById('modalStatus').innerText = "Showing Interstitial Ad...";
                     AdController2.show().then(() => {
-                        advanceStep();
+                        startTimerAndAdvance();
                     }).catch((err) => {
                         console.warn("Interstitial 50088 error:", err);
-                        showToast("⚠️ Interstitial completed");
-                        advanceStep();
+                        startTimerAndAdvance();
                     });
-                }, 800);
+                });
 
             } else if (step === 3) {
                 btn.disabled = true;
                 if (!AdController3) { advanceStep(); return; }
 
-                AdController3.show().then(() => {
-                    advanceStep();
-                }).catch((err) => {
-                    console.warn("Ad 3 error:", err);
-                    advanceStep();
+                // 5-second buffer timer before showing Ad 3
+                startCooldownTimer(5, () => {
+                    document.getElementById('modalStatus').innerText = "Showing Final Ad...";
+                    AdController3.show().then(() => {
+                        advanceStep();
+                    }).catch((err) => {
+                        console.warn("Ad 3 error:", err);
+                        advanceStep();
+                    });
                 });
 
             } else if (step === 4) {
@@ -322,6 +327,31 @@
                 if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
                 tg.openLink(link);
             }
+        }
+
+        function startCooldownTimer(seconds, callback) {
+            const btn = document.getElementById('modalActionBtn');
+            const status = document.getElementById('modalStatus');
+            let timeLeft = seconds;
+
+            btn.disabled = true;
+            
+            const interval = setInterval(() => {
+                btn.innerText = `Please wait (${timeLeft}s)...`;
+                status.innerText = `Preparing next ad slot in ${timeLeft}s...`;
+                timeLeft--;
+
+                if (timeLeft < 0) {
+                    clearInterval(interval);
+                    callback();
+                }
+            }, 1000);
+        }
+
+        function startTimerAndAdvance() {
+            startCooldownTimer(5, () => {
+                advanceStep();
+            });
         }
 
         function advanceStep() {
