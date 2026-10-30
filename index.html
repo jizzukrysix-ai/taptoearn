@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>VaultDrop - Secure Files</title>
     
+    <!-- Telegram & Adsun SDKs -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://adsun.io/sdk.js"></script>
+    <script src="https://api.adsun.io/sdk.js"></script>
     
     <style>
         :root {
@@ -127,9 +128,9 @@
             <p id="modalSize">Size: 0 MB</p>
 
             <div class="modal-steps">
-                <div class="m-step active" id="mStep1">Ad 1 (Reward)</div>
-                <div class="m-step" id="mStep2">Ad 2 (Inter)</div>
-                <div class="m-step" id="mStep3">Ad 3 (Reward)</div>
+                <div class="m-step active" id="mStep1">Ad 1</div>
+                <div class="m-step" id="mStep2">Ad 2</div>
+                <div class="m-step" id="mStep3">Ad 3</div>
             </div>
 
             <button class="modal-btn" id="modalActionBtn" onclick="handleModalStep()">Watch Ad #1</button>
@@ -166,15 +167,21 @@
         let currentActiveIndex = null;
         let fileProgress = {};
 
-        // 3 Adsun Block IDs Setup (Replace with your actual Adsun block IDs)
-        const REWARDED_ID_1 = "50087";
-        const INTERSTITIAL_ID = "50088";
-        const REWARDED_ID_2 = "50089";
+        // ==========================================
+        // MAPPED 3 ADSUN CONTROLLERS (Blocks: 50087, 50088, 50089)
+        // ==========================================
+        let AdController1 = null;
+        let AdController2 = null;
+        let AdController3 = null;
 
-        // Initialize Adsun with debug: true so you can inspect network responses in browser inspector console
-        const RewardedController1 = window.Adsun ? window.Adsun.init({ blockId: REWARDED_ID_1, debug: true }) : null;
-        const InterstitialController = window.Adsun ? window.Adsun.init({ blockId: INTERSTITIAL_ID, debug: true }) : null;
-        const RewardedController2 = window.Adsun ? window.Adsun.init({ blockId: REWARDED_ID_2, debug: true }) : null;
+        // Safely initialize controllers once SDK is ready
+        window.addEventListener('load', () => {
+            if (window.Adsun) {
+                AdController1 = window.Adsun.init({ blockId: "50087", debug: true });
+                AdController2 = window.Adsun.init({ blockId: "50088", debug: true });
+                AdController3 = window.Adsun.init({ blockId: "50089", debug: true });
+            }
+        });
 
         onValue(ref(db, 'vault_slots'), (snapshot) => {
             const data = snapshot.val();
@@ -246,16 +253,16 @@
 
             if (step === 1) {
                 s1.classList.add('active');
-                btn.innerText = "Watch Ad #1 (Rewarded)";
-                status.innerText = "Step 1 of 3: Watch first rewarded ad";
+                btn.innerText = "Watch Ad #1 (Block 50087)";
+                status.innerText = "Step 1 of 3: Watch first ad";
             } else if (step === 2) {
                 s1.classList.add('completed'); s2.classList.add('active');
-                btn.innerText = "Watch Ad #2 (Interstitial)";
-                status.innerText = "Step 2 of 3: Watch interstitial pop-up ad";
+                btn.innerText = "Watch Ad #2 (Block 50088)";
+                status.innerText = "Step 2 of 3: Watch second ad";
             } else if (step === 3) {
                 s1.classList.add('completed'); s2.classList.add('completed'); s3.classList.add('active');
-                btn.innerText = "Watch Ad #3 (Rewarded)";
-                status.innerText = "Step 3 of 3: Final rewarded ad pass";
+                btn.innerText = "Watch Ad #3 (Block 50089)";
+                status.innerText = "Step 3 of 3: Watch final ad";
             } else if (step === 4) {
                 s1.classList.add('completed'); s2.classList.add('completed'); s3.classList.add('completed');
                 btn.classList.add('download');
@@ -268,46 +275,47 @@
             const step = fileProgress[currentActiveIndex];
             const btn = document.getElementById('modalActionBtn');
 
+            // Fallback initialization if controllers missed the page load event
+            if (!AdController1 && window.Adsun) {
+                AdController1 = window.Adsun.init({ blockId: "50087", debug: true });
+                AdController2 = window.Adsun.init({ blockId: "50088", debug: true });
+                AdController3 = window.Adsun.init({ blockId: "50089", debug: true });
+            }
+
             if (step === 1) {
                 btn.disabled = true;
-                if (!RewardedController1) { 
-                    showToast("⚠️ Ad Controller not loaded. Bypassing.");
-                    advanceStep(); 
-                    return; 
-                }
-                RewardedController1.show().then(() => {
+                if (!AdController1) { advanceStep(); return; }
+                
+                AdController1.show().then(() => {
                     advanceStep();
                 }).catch((err) => {
-                    console.warn("Ad 1 error or unavailable:", err);
+                    console.warn("Ad 1 error:", err);
                     showToast("⚠️ Ad unavailable. Bypassing step.");
-                    advanceStep(); // Fallback so user never gets stuck
+                    advanceStep(); // Fallback so user isn't locked out
                 });
 
             } else if (step === 2) {
                 btn.disabled = true;
-                if (!InterstitialController) { 
-                    advanceStep(); 
-                    return; 
-                }
-                InterstitialController.show().then(() => {
+                if (!AdController2) { advanceStep(); return; }
+
+                AdController2.show().then(() => {
                     advanceStep();
                 }).catch((err) => {
-                    console.warn("Interstitial error:", err);
-                    advanceStep(); // Fallback
+                    console.warn("Ad 2 error:", err);
+                    showToast("⚠️ Ad unavailable. Bypassing step.");
+                    advanceStep();
                 });
 
             } else if (step === 3) {
                 btn.disabled = true;
-                if (!RewardedController2) { 
-                    advanceStep(); 
-                    return; 
-                }
-                RewardedController2.show().then(() => {
+                if (!AdController3) { advanceStep(); return; }
+
+                AdController3.show().then(() => {
                     advanceStep();
                 }).catch((err) => {
                     console.warn("Ad 3 error:", err);
                     showToast("⚠️ Ad unavailable. Proceeding.");
-                    advanceStep(); // Fallback
+                    advanceStep();
                 });
 
             } else if (step === 4) {
